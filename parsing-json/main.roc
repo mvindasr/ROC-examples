@@ -9,27 +9,33 @@ app [main] {
 import cli.Stdout
 import cli.Task
 import json.Core exposing [jsonWithOptions]
+import Decode exposing [fromBytesPartial]
+import Interfaces.Bet exposing [Bet]
 
-Bet : {
-    id: I64;
-    time: Str;
-    wagerType: Str;
-    gameType: Str;
-    sport: Str;
-    description: Str;
-    points: Str;
-    odds: Str;
-    amount: F32;
-    player: Player;
-}
+main = 
+    requestBody = Str.toUtf8 "{\"Id\":13,\"Time\":\"Jul 14, 13:00\",\"WagerType\":\"STRAIGHT\",\"GameType\":\"GAME\",\"Player\":{\"Id\":100,\"Username\":\"TestUser\",\"Master\":true,\"Wins\":235,\"Losses\":32,\"Net\":203,\"Created\":\"Mar 23, 2024\"},\"Description\":\"Bet description\",\"Sport\":\"NBA\", \"Points\":\"+7.5\", \"Odds\":\"-100\", \"Amount\":25.50}"
 
+    decoder = jsonWithOptions { fieldNameMapping: PascalCase }
+    decoded : DecodeResult Bet
+    decoded = fromBytesPartial requestBody decoder
 
-Player : {
-    id: I64;
-    username: Str;
-    master: Bool;
-    wins: I64;
-    losses: I64;
-    net: I64;
-    created: Str;
-}
+    when decoded.result is
+        Ok bet -> Stdout.line 
+            """
+            -------------------------------------------
+                  Successfully parsed Bet ID. $(Num.toStr bet.id)
+            -------------------------------------------
+            Time: $(bet.time)
+            Wager-type: $(bet.wagerType)
+            Sport: $(bet.sport)
+            Points: $(bet.points)
+            Odds: $(bet.odds)
+            Amount: $(Num.toStr bet.amount)
+            Player: $(bet.player.username)
+            Master: $(if bet.player.master then "Yes" else "No")
+            Wins: $(Num.toStr bet.player.wins)
+            Losses: $(Num.toStr bet.player.losses)
+            -------------------------------------------
+            """
+        Err _ -> Task.err (Exit 1 "Error, failed to decode bet")
+
